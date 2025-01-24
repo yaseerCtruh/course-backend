@@ -5,7 +5,6 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 
 const registerUser = asyncHandler(async (req, res) => {
-  console.log("🚀 ~ registerUser ~ req.body:", req.body);
   const { userName, email, password, fullName } = req.body;
   if (
     [userName, email, password, fullName].some((field) => field?.trim() === "")
@@ -15,7 +14,6 @@ const registerUser = asyncHandler(async (req, res) => {
   const existedUser = await User.findOne({
     $or: [{ userName }, { email }],
   });
-  console.log("🚀 ~ registerUser ~ existedUser:", existedUser);
 
   if (existedUser) {
     throw new ApiError(409, "User with this email or username already exists!");
@@ -48,13 +46,10 @@ const registerUser = asyncHandler(async (req, res) => {
   const createdUser = await User.findById(user._id).select(
     "-password -refreshToken",
   );
-  console.log("🚀 ~ registerUser ~ createdUser:", createdUser);
 
   if (!createdUser) {
     throw new ApiError(400, "Something went wrong while registering user.");
   }
-
-  console.log("🚀 ~ registerUser ~ user:", user);
 
   return res
     .status(201)
