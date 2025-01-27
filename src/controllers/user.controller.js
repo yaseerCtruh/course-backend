@@ -18,7 +18,7 @@ const generateAccessAndRefreshToken = async (userId) => {
 
     return { accessToken, refreshToken };
   } catch (error) {
-    console.log(error);
+    console.error(error);
     throw new ApiError(500, "Something went wrong while generating tokens");
   }
 };
@@ -354,7 +354,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
   const user = await User.aggregate([
     {
       $match: {
-        _id: new Types.ObjectId.createFromHexString(req.user?._id),
+        _id: new Types.ObjectId(req.user?._id),
       },
     },
     {
@@ -372,13 +372,11 @@ const getWatchHistory = asyncHandler(async (req, res) => {
               as: "owner",
               pipeline: [
                 {
-                  $project: [
-                    {
-                      fullName: 1,
-                      userName: 1,
-                      avatar: 1,
-                    },
-                  ],
+                  $project: {
+                    fullName: 1,
+                    userName: 1,
+                    avatar: 1,
+                  },
                 },
               ],
             },
