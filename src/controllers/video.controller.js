@@ -1,4 +1,4 @@
-import mongoose, { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId, Types } from "mongoose";
 import { Video } from "../models/video.model.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -60,13 +60,43 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  //TODO: get video by id
 
   if (!videoId) {
     throw new ApiError(400, "Video ID is required!");
   }
+  // Mongoose Query
+  // const video = await Video.findById(videoId);
 
-  const video = await Video.findById(videoId);
+  // Aggregation Pipeline
+  const video = await Video.aggregate([
+    {
+      $match: {
+        _id: new Types.ObjectId(videoId),
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "uploader",
+      },
+    },
+    {
+      $unwind: "$uploader",
+    },
+    {
+      $project: {
+        "uploader.password": 0,
+        "uploader.refreshToken": 0,
+        "uploader.watchHistory": 0,
+        "uploader.createdAt": 0,
+        "uploader.updatedAt": 0,
+        "uploader.coverImage": 0,
+      },
+    },
+  ]);
+
   if (!video) {
     throw new ApiError(404, "Video not found!");
   }
