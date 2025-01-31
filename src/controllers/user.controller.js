@@ -77,6 +77,7 @@ const registerUser = asyncHandler(async (req, res) => {
     .status(201)
     .json(new ApiResponse(201, createdUser, "User registered successfully"));
 });
+
 // user login controller
 const loginUser = asyncHandler(async (req, res) => {
   const { email, userName, password } = req.body;
@@ -113,6 +114,7 @@ const loginUser = asyncHandler(async (req, res) => {
       ),
     );
 });
+
 // user logout controller
 const logoutUser = asyncHandler(async (req, res) => {
   const id = req.user._id;
@@ -125,6 +127,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     .clearCookie("refreshToken", options)
     .json(new ApiResponse(200, {}, "User logged out successfully"));
 });
+
 // user refresh access token controller
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken =
@@ -165,6 +168,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     throw new ApiError(401, error?.message || "Invalid Refresh Token");
   }
 });
+
 // user forgot password controller
 const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
@@ -185,6 +189,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, req.user, "User found successfully"));
 });
+
 // update account details controller
 const updateAccountDetails = asyncHandler(async (req, res) => {
   const { fullName, email } = req.body;
@@ -202,6 +207,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, user, "Account details updated successfully"));
 });
+
 // update user avatar controller
 const updateUserAvatar = asyncHandler(async (req, res) => {
   const avatarLocalPath = req.file?.path;
@@ -221,6 +227,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, user, "Avatar updated successfully"));
 });
+
 // update user cover image controller
 const updateUserCoverImage = asyncHandler(async (req, res) => {
   const coverImageLocalPath = req.file?.path;
@@ -240,6 +247,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, user, "Cover Image updated successfully"));
 });
+
 // get user channel profile controller
 const getUserChannelProfile = asyncHandler(async (req, res) => {
   const { userName } = req.params;
@@ -308,6 +316,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       new ApiResponse(200, channel[0], "User channel fetched successfully"),
     );
 });
+
 // get watch history controller
 const getWatchHistory = asyncHandler(async (req, res) => {
   const user = await User.aggregate([
@@ -359,6 +368,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
       ),
     );
 });
+
 export {
   registerUser,
   loginUser,
