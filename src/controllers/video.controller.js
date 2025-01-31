@@ -8,7 +8,87 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
-  //TODO: get all videos based on query, sort, pagination
+
+  // Validate the userId if provided; throw an error if it's not a valid ObjectId
+  if (userId && !Types.ObjectId.isValid(userId)) {
+    throw new ApiError(400, "Invalid User ID");
+  }
+
+  // Define a constant for default pagination value
+  const VALUE = 10;
+
+  // Set up pagination options with default values
+  const paginationOptions = {
+    page: Math.max(parseInt(page, VALUE), 1), // Ensure page is at least 1
+    limit: Math.max(parseInt(limit, VALUE), 1), // Ensure limit is at least 1
+  };
+
+  // Initialize an empty aggregation pipeline
+  const pipeline = [];
+
+  // Initialize an array to hold match conditions for the query
+  const matchConditions = [];
+
+  // Handle visibility (public/private)
+  if (userId) {
+    const isOwner = req.user?._id.toString() === userId;
+    if (isOwner) {
+      // Owner can see all their videos (public + private)
+      matchConditions.push({ owner: new mongoose.Types.ObjectId(userId) });
+    } else {
+      // Non-owners can only see public videos of this user
+      matchConditions.push({
+        owner: new mongoose.Types.ObjectId(userId),
+        isPublic: true,
+      });
+    }
+  } else {
+    // No userId: show all public videos
+    matchConditions.push({ isPublic: true });
+  }
+
+  // Check if a search query is provided
+  if (query) {
+    // Create a case-insensitive regex for searching titles and descriptions
+    const regex = new RegExp(query, "i");
+
+    matchConditions.push({
+      $or: [
+        { title: { $regex: regex } }, // Match titles containing the query
+        { description: { $regex: regex } }, // Match descriptions containing the query
+      ],
+    });
+  }
+
+  // If there are any match conditions, add them to the pipeline
+  if (matchConditions.length > 0) {
+    pipeline.push({
+      $match: {
+        $and: matchConditions,
+      },
+    });
+  }
+
+  // Check if sorting parameters are provided
+  if (sortBy && sortType) {
+    // Determine sort order based on sortType (ascending or descending)
+    const sortOrder = sortType.toLowerCase() === "asc" ? 1 : -1;
+
+    pipeline.push({
+      $sort: { [sortBy]: sortOrder }, // Sort based on specified field and order
+    });
+  } else {
+    // Default sorting by creation date in descending order if no sorting parameters are provided
+    pipeline.push({ $sort: { createdAt: -1 } });
+  }
+
+  // Execute the aggregation pipeline with pagination options using aggregatePaginate method
+  const result = await Video.aggregatePaginate(pipeline, paginationOptions);
+
+  // Send a successful response with fetched videos and a message
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Videos fetched successfully!"));
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
