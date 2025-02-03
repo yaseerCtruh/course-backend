@@ -14,6 +14,9 @@ const videoSchema = new Schema(
     views: { type: Number, default: 0 },
     isPublic: { type: Boolean, default: true },
     owner: { type: Schema.Types.ObjectId, ref: "User" },
+    likesCount: { type: Number, default: 0 },
+    likes: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    isLikedByLoggedInUser: { type: Boolean, default: false },
   },
   {
     timestamps: true,
