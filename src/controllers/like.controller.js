@@ -9,17 +9,19 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   //TODO: toggle like on video
   if (!videoId) {
-    throw new ApiError(400, "Video ID is required!");
+    return res
+      .status(400)
+      .json(new ApiError(400, null, "Video ID is required"));
   }
 
   const userId = req?.user?._id;
   if (!userId) {
-    throw new ApiError(401, "Unauthorized");
+    return res.status(400).json(new ApiError(400, null, "User ID is required"));
   }
 
   const video = await Video.findById(videoId);
   if (!video) {
-    throw new ApiError(404, "Video not found!");
+    return res.status(404).json(new ApiError(404, null, "Video not found"));
   }
 
   const existingLike = await Like.findOne({
@@ -32,19 +34,20 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
         _id: existingLike?._id,
       });
       if (!unLikeVideo) {
-        throw new ApiError(404, "Video not found");
+        return res
+          .status(500)
+          .json(new ApiError(500, null, "Failed to dislike video"));
       }
       video.likesCount -= 1;
+      video.isLikedByLoggedInUser = false;
       await video.save();
-      const result = {
-        video,
-        unLikeVideo,
-      };
       return res
         .status(200)
-        .json(new ApiResponse(200, result, "Video disliked successfully"));
+        .json(
+          new ApiResponse(200, unLikeVideo, "Video disliked successfully!"),
+        );
     } catch (error) {
-      throw new ApiError(500, "Failed to unlike video");
+      return res.status(500).json(new ApiError(500, null, "Failed to dislike"));
     }
   } else {
     try {
@@ -53,19 +56,22 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
         likedBy: userId,
       });
       if (!likeVideo) {
-        throw new ApiError(400, "Failed to like video");
+        return res
+          .status(500)
+          .json(new ApiError(500, null, "Failed to like video"));
       }
 
       video.likesCount += 1;
+      video.isLikedByLoggedInUser = true;
       await video.save();
 
-      const result = {
-        video,
-        likeVideo,
-      };
-      return res.status(200).json(new ApiResponse(200, result, "Liked video"));
+      return res
+        .status(200)
+        .json(new ApiResponse(200, likeVideo, "Video liked successfully!"));
     } catch (error) {
-      throw new ApiError(500, "Failed to like video");
+      return res
+        .status(500)
+        .json(new ApiError(500, null, "Failed to like video"));
     }
   }
 });
