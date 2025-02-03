@@ -134,7 +134,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
         new ApiError(
           403,
           null,
-          "Forbidden: You are not the owner of this playlist!",
+          "Forbidden: You can't add video to this playlist! You are not the owner of this playlist!",
         ),
       );
   }
@@ -196,7 +196,7 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
         new ApiError(
           403,
           null,
-          "Forbidden: You are not the owner of this playlist!",
+          "Forbidden: You can't remove video from this playlist! You are not the owner of this playlist!",
         ),
       );
   }
@@ -239,7 +239,44 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
 
 const deletePlaylist = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
-  // TODO: delete playlist
+  if (!playlistId.trim() || !Types.ObjectId.isValid(playlistId)) {
+    return res.status(400).json(new ApiError(400, null, "Invalid playlist ID"));
+  }
+
+  const userId = req?.user?._id;
+  if (!userId) {
+    return res.status(400).json(new ApiError(401, null, "Unauthorized!"));
+  }
+
+  const playlist = await Playlist.findById(playlistId);
+  if (!playlist) {
+    return res.status(404).json(new ApiError(404, null, "Playlist not found"));
+  }
+
+  if (playlist.owner.toString() !== userId.toString()) {
+    return res
+      .status(403)
+      .json(
+        new ApiError(
+          403,
+          null,
+          "Forbidden: You can't delete this playlist! You are not the owner of this playlist!",
+        ),
+      );
+  }
+
+  const deleteUserPlaylist = await Playlist.findByIdAndDelete(playlistId);
+  if (!deleteUserPlaylist) {
+    return res
+      .status(500)
+      .json(new ApiError(500, null, "Failed to delete playlist"));
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, deleteUserPlaylist, "Playlist deleted successfully"),
+    );
 });
 
 const updatePlaylist = asyncHandler(async (req, res) => {
