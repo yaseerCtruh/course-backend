@@ -1,4 +1,4 @@
-import mongoose, { isValidObjectId } from "mongoose";
+import { Types } from "mongoose";
 import { Playlist } from "../models/playlist.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -14,7 +14,7 @@ const createPlaylist = asyncHandler(async (req, res) => {
 
   const userId = req?.user?._id;
   if (!userId) {
-    return res.status(400).json(new ApiError(400, null, "User ID is required"));
+    return res.status(400).json(new ApiError(401, null, "Unauthorized!"));
   }
 
   const playlist = await Playlist.create({
@@ -41,7 +41,67 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
 
 const getPlaylistById = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
-  //TODO: get playlist by id
+
+  if (!playlistId || !Types.ObjectId.isValid(playlistId)) {
+    return res
+      .status(400)
+      .json(new ApiError(400, null, "Valid playlist ID is required"));
+  }
+
+  const userId = req?.user?._id;
+  if (!userId) {
+    return res.status(400).json(new ApiError(401, null, "Unauthorized!"));
+  }
+
+  const playlist = await Playlist.aggregate([
+    {
+      $match: {
+        _id: new Types.ObjectId(playlistId),
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "videos",
+        foreignField: "_id",
+        as: "videos",
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+      },
+    },
+    {
+      $unwind: "$owner",
+    },
+    {
+      $project: {
+        name: 1,
+        description: 1,
+        videos: 1,
+        owner: {
+          userName: "$owner.userName",
+          avatar: "$owner.avatar",
+          fullName: "$owner.fullName",
+        },
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    },
+  ]);
+  if (!playlist || playlist?.length === 0) {
+    return res
+      .status(404)
+      .json(new ApiError(404, null, "Playlist not found !"));
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, playlist, "Playlist found!"));
 });
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {

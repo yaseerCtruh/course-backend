@@ -1,7 +1,7 @@
 import mongoose, { isValidObjectId, Types } from "mongoose";
 import { Like } from "../models/like.model.js";
 import { ApiError } from "../utils/ApiError.js";
-import { ApiResponse } from "../utils/apiResponse.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Video } from "../models/video.model.js";
 import { Comment } from "../models/comment.model.js";
@@ -16,7 +16,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
 
   const userId = req?.user?._id;
   if (!userId) {
-    return res.status(400).json(new ApiError(400, null, "User ID is required"));
+    return res.status(400).json(new ApiError(401, null, "Unauthorized!"));
   }
 
   const video = await Video.findById(videoId);
@@ -86,7 +86,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
 
   const userId = req?.user?._id;
   if (!userId) {
-    return res.status(400).json(new ApiError(400, null, "User ID is required"));
+    return res.status(400).json(new ApiError(401, null, "Unauthorized!"));
   }
   const comment = await Comment.findById(commentId);
   if (!comment) {
@@ -146,7 +146,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 const getLikedVideos = asyncHandler(async (req, res) => {
   const userId = req?.user?._id;
   if (!userId) {
-    return res.status(400).json(new ApiError(400, null, "User ID is required"));
+    return res.status(400).json(new ApiError(401, null, "Unauthorized!"));
   }
   const allLikedVideos = await Like.aggregate([
     {
