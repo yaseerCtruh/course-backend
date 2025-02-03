@@ -7,7 +7,6 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 
 const createPlaylist = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
-  console.log("🚀 ~ createPlaylist ~ req.body:", req.body);
 
   if (!name || !description) {
     return res
@@ -130,7 +129,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
 
   if (playlist.owner.toString() !== userId.toString()) {
     return res
-      .status(401)
+      .status(403)
       .json(
         new ApiError(
           403,
@@ -172,7 +171,70 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
 
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
   const { playlistId, videoId } = req.params;
-  // TODO: remove video from playlist
+  if (!playlistId.trim() || !Types.ObjectId.isValid(playlistId)) {
+    return res.status(400).json(new ApiError(400, null, "Invalid playlist ID"));
+  }
+
+  if (!videoId?.trim() || !Types.ObjectId.isValid(videoId)) {
+    return res.status(400).json(new ApiError(400, null, "Invalid video ID"));
+  }
+
+  const userId = req?.user?._id;
+  if (!userId) {
+    return res.status(400).json(new ApiError(401, null, "Unauthorized!"));
+  }
+
+  const playlist = await Playlist.findById(playlistId);
+  if (!playlist) {
+    return res.status(404).json(new ApiError(404, null, "Playlist not found"));
+  }
+
+  if (playlist.owner.toString() !== userId.toString()) {
+    return res
+      .status(403)
+      .json(
+        new ApiError(
+          403,
+          null,
+          "Forbidden: You are not the owner of this playlist!",
+        ),
+      );
+  }
+
+  const video = await Video.findById(videoId);
+  if (!video) {
+    return res.status(400).json(new ApiError(400, null, "Video not found"));
+  }
+
+  if (!playlist.videos.includes(videoId)) {
+    return res
+      .status(400)
+      .json(new ApiError(400, null, "Video isn't present in playlist"));
+  }
+
+  const removeVideo = await Playlist.findByIdAndUpdate(
+    playlistId,
+    {
+      $pull: {
+        videos: {
+          $in: [videoId],
+        },
+      },
+    },
+    {
+      new: true,
+    },
+  );
+
+  if (!removeVideo) {
+    return res
+      .status(500)
+      .json(new ApiError(500, null, "Failed to remove video from playlist"));
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, removeVideo, "Video removed from playlist"));
 });
 
 const deletePlaylist = asyncHandler(async (req, res) => {
