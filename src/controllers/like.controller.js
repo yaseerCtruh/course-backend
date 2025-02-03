@@ -8,7 +8,6 @@ import { Comment } from "../models/comment.model.js";
 
 const toggleVideoLike = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  //TODO: toggle like on video
   if (!videoId || !Types.ObjectId.isValid(videoId)) {
     return res
       .status(400)
@@ -79,7 +78,6 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
   const { commentId } = req.params;
-  //TODO: toggle like on comment
   if (!commentId || !Types.ObjectId.isValid(commentId)) {
     return res
       .status(400)
@@ -146,7 +144,61 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 });
 
 const getLikedVideos = asyncHandler(async (req, res) => {
-  //TODO: get all liked videos
+  const userId = req?.user?._id;
+  if (!userId) {
+    return res.status(400).json(new ApiError(400, null, "User ID is required"));
+  }
+  const allLikedVideos = await Like.aggregate([
+    {
+      $match: { likedBy: new Types.ObjectId(userId) },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "video",
+        foreignField: "_id",
+        as: "video",
+      },
+    },
+    {
+      $unwind: "$video",
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "video.owner",
+        foreignField: "_id",
+        as: "owner",
+      },
+    },
+    { $unwind: "$owner" },
+    {
+      $project: {
+        title: "$video.title",
+        thumbnail: "$video.thumbnail",
+        videoFile: "$video.videoFile",
+        description: "$video.description",
+        duration: "$video.duration",
+        views: "$video.views",
+        likesCount: "$video.likesCount",
+        uploader: {
+          fullName: "$owner.fullName",
+          userName: "$owner.userName",
+          avatar: "$owner.avatar",
+        },
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        allLikedVideos,
+        "All liked videos fetched successfully!",
+      ),
+    );
 });
 
 export { toggleCommentLike, toggleTweetLike, toggleVideoLike, getLikedVideos };
